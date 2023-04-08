@@ -52,7 +52,6 @@ fn parse_inputs(input: &str) -> (Vec<(i32, i32, i32)>, Vec<(i32, i32)>) {
         })
         .collect::<Vec<(i32, i32, i32)>>();
     
-    // let sensors = vec![];
     (sensors, beacons)
 }
 
@@ -63,6 +62,21 @@ fn find_ranges(sensors: &Vec<(i32, i32, i32)>, y_level: i32) -> Vec<RangeInclusi
         let overflow = sensor.2 - (sensor.1 - y_level).abs();
         let range = (sensor.0 - overflow)..=(sensor.0 + overflow);
         ranges.push(range);
+    }
+
+    ranges
+}
+
+fn filter_and_find_ranges(sensors: &Vec<(i32, i32, i32)>, y_level: i32) -> Vec<RangeInclusive<i32>> {
+    let mut ranges = vec![];
+
+    for sensor in sensors.iter() {
+        let overflow = sensor.2 - (sensor.1 - y_level).abs();
+        if overflow < 0 {
+            continue;
+        }
+
+        ranges.push((sensor.0 - overflow)..=(sensor.0 + overflow));
     }
 
     ranges
@@ -86,11 +100,6 @@ fn merge_ranges(ranges: Vec<RangeInclusive<i32>>) -> Vec<RangeInclusive<i32>> {
 }
 
 fn part_one(input: &str, y_level: i32) -> i32 {
-    let (sensorss, beaconss) = parse_inputs(&input);
-    println!("Sensors");
-    sensorss.iter().for_each(|v| println!("{v:?}"));
-    println!("Beacons");
-    beaconss.iter().for_each(|v| println!("{v:?}"));
     let (sensors, num_beacons_inline) = parse_input(&input, y_level);
     let mut ranges = find_ranges(&sensors, y_level);
 
@@ -104,9 +113,10 @@ fn part_one(input: &str, y_level: i32) -> i32 {
 }
 
 fn part_two(input: &str, d_max: i32) -> usize {
-    for i in (0..=d_max).rev() {//4000000 {
-        let (sensors, _) = parse_input(&input, i);
-        let mut ranges = find_ranges(&sensors, i);
+    let (sensors, _beacons) = parse_inputs(&input);
+    for y in (0..=d_max).rev() {
+        let mut ranges = filter_and_find_ranges(&sensors, y);
+        // println!("{y}");
         ranges.sort_by_key(|v| *v.start());
         let merged_ranges = merge_ranges(ranges);
         let clamped_ranges = merged_ranges.iter().map(|r| {
@@ -122,14 +132,13 @@ fn part_two(input: &str, d_max: i32) -> usize {
         }).collect::<Vec<RangeInclusive<i32>>>();
 
         if clamped_ranges.len() > 1 {
-            dbg!(i);
-            let x = *clamped_ranges[0].end() as usize + 1 as usize;
-            let y = i as usize;
+            let x = *clamped_ranges[0].end() as usize + 1;
+            let y = y as usize;
             return (x * 4000000) + y;
         }
     }
 
-    0
+    0 as usize
 }
 
 #[cfg(test)]
